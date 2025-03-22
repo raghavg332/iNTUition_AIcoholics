@@ -13,9 +13,8 @@ import snowflake.connector
 import random
 import datetime
 
-from groq import Groq
 
-GROQ_API_KEY = os.environ["GROQ_API_KEY"]
+GROQ_API_KEY = "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"
 GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 
 def authenticate_github(app_id: int, installation_id, private_key: str):
@@ -199,8 +198,8 @@ def build_full_prompt(pr_description: str, code_diff_str: str) -> str:
 You are an AI code reviewer and documentation assistant.
 
 A developer submitted the following pull request. Please do the following:
-1. 🔍 Summarize the overall purpose of the PR.
-2. 🧠 Rate the merge confidence as: High / Medium / Low.
+1. 🔍 Summarize the overall purpose of the PR. Be a little detailed
+2. 🧠 Rate the merge confidence on a scale of 1 - 10
 3. ✅ Review the code for:
    - Syntax issues
    - Style (PEP8)
@@ -214,11 +213,11 @@ A developer submitted the following pull request. Please do the following:
 ## Code Diff:
 {code_diff_str}
 
-Respond ONLY in this JSON format:
+Respond ONLY in this JSON format without any additional text:
 
 {{
   "ai_summary": "...",
-  "merge_confidence": "High / Medium / Low",
+  "merge_confidence": "1 - 10",
   "code_quality": {{
     "syntax_check": "...",
     "style_check": "...",
@@ -243,8 +242,6 @@ def review_and_store_pr(pr_description: str, code_diff: dict, pr_title: str, pr_
                 new_code = ""
             code_diff_str += f"Function: {func_name}\n\nOld Code:\n{old_code}\n\nNew Code:\n{new_code}"
     docstring = update_documentation_with_rag(pr_description, code_diff)
-    print(docstring)
-    print('\n\n')
     pr_id = random.randint(1000, 9999)
     prompt = build_full_prompt(pr_description, code_diff_str)
 
@@ -304,10 +301,12 @@ def review_and_store_pr(pr_description: str, code_diff: dict, pr_title: str, pr_
             conn.commit()
 
             logging.info(f"[✅] PR #{pr_id} analysis saved to Snowflake.")
+            print(f"[✅] PR #{pr_id} analysis saved to Snowflake.")
             return review_data
 
         except json.JSONDecodeError:
             logging.error("[❌] Groq returned non-JSON output.")
+            print("[❌] Groq returned non-JSON output.")
             return {"error": "Invalid JSON from Groq"}
 
     except Exception as e:
@@ -329,10 +328,8 @@ def process_pull_request(g, repo_name, pr_number, sender=None):
         old_code = get_file_contents(g, repo_name, file, pr.base.sha)
         added_or_modified_functions_after = extract_functions(new_code, "python", code_diff[file]['added_or_modified_lines'])
         deleted_functions_before = extract_functions(old_code, "python", code_diff[file]['deleted_lines'])
-
         old_functions_all = extract_functions(old_code, "python", set(range(1, len(old_code.split("\n")))))
         new_functions_all = extract_functions(new_code, "python", set(range(1, len(new_code.split("\n")))))
-
         for func in added_or_modified_functions_after:
             matched_old_function = next((f for f in old_functions_all if f['name'] ==  func['name']), None)
             diff_func[func['name']] = {
@@ -348,33 +345,54 @@ def process_pull_request(g, repo_name, pr_number, sender=None):
             }
         
         file_diff_func[file] = diff_func
+    
+    # Get the review data and post a comment
+    review_data = review_and_store_pr(pr_description, file_diff_func, pr_title, pr_author, pr_status)
+    
+    # Post the review as a comment on the PR
+    post_review_comment(g, repo_name, pr_number, review_data)
 
-    review_and_store_pr(pr_description, file_diff_func, pr_title, pr_author, pr_status)
 
-if __name__ == "__main__":
-    # chat_completion = client.chat.completions.create(
-    #     messages=[
-    #         {
-    #             "role": "user",
-    #             "content": "Expalin the difference between a list and a tuple",
-    #         }
-    #     ],
-    #     model="deepseek-r1-distill-qwen-32b"
-    # )
+def post_review_comment(g, repo_name, pr_number, review_data):
+    """
+    Posts the AI review as a comment on the pull request.
+    
+    Args:
+        g: Authenticated GitHub instance
+        repo_name: Repository name (owner/repo)
+        pr_number: Pull request number
+        review_data: The AI review data dictionary
+    """
+    try:
+        # Get the repo and PR objects
+        repo = g.get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+        
+        # Format the comment body
+        comment_body = f"""
+## 🤖 AI Code Review
 
-    # print(chat_completion.choices[0].message.content)
-    with open("/Applications/Development/iNTUition_AIcoholics/backend/pulloutrequest.2025-03-22.private-key.pem", "r") as f:
-        private_key = f.read()
+### Summary
+{review_data.get('ai_summary', 'No summary available')}
 
-    g = authenticate_github(1188098, 63112022, private_key=private_key)
-    process_pull_request(g, "raghavg332/Testing", 5)
-    # print(g.get_repo("raghavg332/Testing").name)
-    # pr = get_pull_request(g, "raghavg332/Testing", 5)
-    # print(pr.title)
-    # print(pr)
-    # lines_changed = get_lines_changed(pr)
-    # print(lines_changed)
-    # code = get_file_contents(g, "raghavg332/Testing", list(lines_changed.keys())[0], pr.head.sha)
-    # print(code)
-    # functions = extract_functions(code, "python", lines_changed[list(lines_changed.keys())[0]]['added_or_modified_lines'])
-    # print(functions)
+### Merge Confidence: **{review_data.get('merge_confidence', 'Unknown')}**
+
+### Code Quality Review
+- **Syntax:** {review_data.get('code_quality', {}).get('syntax_check', 'Not analyzed')}
+- **Style:** {review_data.get('code_quality', {}).get('style_check', 'Not analyzed')}
+- **Functionality:** {review_data.get('code_quality', {}).get('functionality_check', 'Not analyzed')}
+- **Overall Rating:** {review_data.get('code_quality', {}).get('final_rating', 'Not rated')}
+
+---
+*This review was automatically generated by AI.*
+"""
+        
+        # Create the comment on the PR
+        pr.create_issue_comment(comment_body)
+        logging.info(f"[✅] Posted AI review comment on PR #{pr_number} in {repo_name}")
+        print(f"[✅] Posted AI review comment on PR #{pr_number} in {repo_name}")
+        return True
+    except Exception as e:
+        logging.exception(f"[❌] Failed to post comment on PR #{pr_number}: {str(e)}")
+        print(f"[❌] Failed to post comment on PR #{pr_number}: {str(e)}")
+        return False

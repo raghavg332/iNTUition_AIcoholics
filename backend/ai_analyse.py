@@ -104,7 +104,7 @@ Respond ONLY in this JSON format:
 
 {{
   "ai_summary": "...",
-  "merge_confidence": "High / Medium / Low",
+  "merge_confidence": "1-10",
   "code_quality": {{
     "syntax_check": "...",
     "style_check": "...",
@@ -187,27 +187,27 @@ def review_and_store_pr(pr_description: str, code_diff: str, pr_title: str, pr_a
         logging.exception("Groq API or Snowflake insert failed")
         return {"error": str(e)}
 
-# 🧪 Example test
-if __name__ == "__main__":
-    code_diff = """
-diff --git a/app/main.py b/app/main.py
-index a1b2c3d..d4e5f6g 100644
---- a/app/main.py
-+++ b/app/main.py
-@@ def main():
--    print("Hello")
-+    log_greeting("Hello, world!")
-+    print("Execution completed.")
+# # 🧪 Example test
+# if __name__ == "__main__":
+#     code_diff = """
+# diff --git a/app/main.py b/app/main.py
+# index a1b2c3d..d4e5f6g 100644
+# --- a/app/main.py
+# +++ b/app/main.py
+# @@ def main():
+# -    print("Hello")
+# +    log_greeting("Hello, world!")
+# +    print("Execution completed.")
 
-+def log_greeting(message):
-+    \"\"\"Logs the greeting message to a file\"\"\"
-+    with open("logs.txt", "a") as log_file:
-+        log_file.write(f"Greeting logged: {message}\\n")
-"""
-    pr_description = "Update main function to greet the world."
-    pr_title = "Update main function"
-    pr_author = "johndoe"
-    pr_status = "OPEN"
+# +def log_greeting(message):
+# +    \"\"\"Logs the greeting message to a file\"\"\"
+# +    with open("logs.txt", "a") as log_file:
+# +        log_file.write(f"Greeting logged: {message}\\n")
+# """
+#     pr_description = "Update main function to greet the world."
+#     pr_title = "Update main function"
+#     pr_author = "johndoe"
+#     pr_status = "OPEN"
 
-    result = review_and_store_pr(pr_description, code_diff, pr_title, pr_author, pr_status)
-    print(json.dumps(result, indent=2))
+#     result = review_and_store_pr(pr_description, code_diff, pr_title, pr_author, pr_status)
+#     print(json.dumps(result, indent=2))

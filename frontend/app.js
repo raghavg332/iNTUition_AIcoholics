@@ -1,5 +1,39 @@
 const e = React.createElement;
 
+function parseDiff(diff) {
+    const lines = diff.split('\n');
+    const parsedLines = [];
+
+    let section = null;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.startsWith('File:') || line.startsWith('Function:')) {
+            parsedLines.push({ type: 'context', content: line });
+            section = null;
+        } else if (line.trim() === 'Old Code:') {
+            parsedLines.push({ type: 'context', content: 'Old Code:' });
+            section = 'old';
+
+            // Handle empty old code
+            if (lines[i + 1]?.trim() === 'New Code:') {
+                parsedLines.push({ type: 'old', content: '<NO PREVIOUS CODE>' });
+            }
+        } else if (line.trim() === 'New Code:') {
+            parsedLines.push({ type: 'context', content: 'New Code:' });
+            section = 'new';
+        } else if (section === 'old' || section === 'new') {
+            parsedLines.push({ type: section, content: line });
+        } else {
+            parsedLines.push({ type: 'context', content: line });
+        }
+    }
+
+    return parsedLines;
+}
+
+
 // Analytics component to visualize PR data
 function Analytics({ prs }) {
     // Count PRs by status
@@ -134,6 +168,26 @@ function Analytics({ prs }) {
         ])
     ]);
 }
+
+function renderDiffSection(diff) {
+    const diffLines = parseDiff(diff);
+
+    return React.createElement(
+        'pre',
+        { className: 'diff-content' },
+        diffLines.map((line, index) => {
+            const className =
+                line.type === 'old' ? 'diff-old-code diff-code-line' :
+                line.type === 'new' ? 'diff-new-code diff-code-line' :
+                'diff-context-line';
+
+            return React.createElement('div', { key: index, className }, line.content);
+        })
+    );
+}
+
+const ReactMarkdown = window.ReactMarkdown || (() => null) // fallback if not loaded
+
 
 // Main App component
 function App() {
@@ -331,17 +385,17 @@ function App() {
         prDetailsContent = e('p', null, 'No details available for this PR');
     } else if (selectedPR) {
         // PR details content
-        const confidenceIndicator = e('div', {key: 'confidence-indicator', className: 'confidence-indicator'}, [
-            e('div', {
-                className: 'confidence-bar',
-                style: {
-                    width: prDetails.merge_confidence === 'High' ? '90%' : 
-                           prDetails.merge_confidence === 'Medium' ? '60%' : '30%',
-                    backgroundColor: prDetails.merge_confidence === 'High' ? '#28a745' : 
-                                    prDetails.merge_confidence === 'Medium' ? '#ffc107' : '#dc3545'
-                }
-            }),
-            e('span', {className: 'confidence-label'}, prDetails.merge_confidence)
+        const score = Number(prDetails.merge_confidence_score || 0); // 0-10
+        const maxScore = 10;
+        const percent = Math.min((score / maxScore) * 100, 100);
+        const confidenceIndicator = e('div', { key: 'confidence-indicator', className: 'confidence-gradient-wrapper' }, [
+            e('div', { className: 'confidence-gradient-bar' }, [
+                e('div', {
+                    className: 'confidence-score-indicator',
+                    style: { left: `${percent}%` }
+                })
+            ]),
+            e('div', { style: { marginTop: '8px', fontWeight: 600 } }, `Score: ${score}/10`)
         ]);
         
         // Comment section
@@ -445,9 +499,17 @@ function App() {
                     e('pre', {key: 'text'}, prDetails.code_quality)
                 ]),
                 
+                
+                ('div', {key: 'doc-string', className: 'doc-string-section'}, [
+                    e('h3', {key: 'title'}, 'Documentation'),
+                    e('div', {key: 'content', className: 'doc-string-content'},
+                        e(ReactMarkdown, null, prDetails.doc_string || 'No documentation available for this PR.')
+                    )
+                ]),
+
                 e('div', {key: 'diff', className: 'diff-section'}, [
                     e('h3', {key: 'title'}, 'Diff'),
-                    e('pre', {key: 'text', className: 'diff-content'}, prDetails.diff)
+                    renderDiffSection(prDetails.diff)
                 ]),
                 
                 commentSection,

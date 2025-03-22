@@ -92,8 +92,10 @@ def fetch_pr_analysis(pr_id: int):
             "pr_id": result['PR_ID'],
             "ai_summary": result['AI_SUMMARY'],
             "merge_confidence": result['MERGE_CONFIDENCE'].capitalize(),  # Capitalize for frontend
+            "merge_confidence_score": float(result['MERGE_CONFIDENCE']) if result.get('MERGE_CONFIDENCE') else 0,
             "code_quality": result['CODE_QUALITY'],
-            "diff": result['DIFF']
+            "diff": result['DIFF'],
+            "doc_string": result['DOCSTRINGS'] if 'DOCSTRINGS' in result else "No documentation available for this PR."
         }
         
         cursor.close()
@@ -102,6 +104,7 @@ def fetch_pr_analysis(pr_id: int):
     except Exception as e:
         print(f"Error fetching PR analysis: {e}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
 '''
 @app.get("/api/prs")
 def fetch_all_prs():
@@ -134,7 +137,8 @@ def fetch_pr_analysis(pr_id: int):
         "ai_summary": "This PR adds a new feature that improves user experience",
         "merge_confidence": "High",
         "code_quality": "Good code quality. No major issues found.",
-        "diff": "```\n+ def new_function():\n+     return 'new feature'\n```"
+        "diff": "```\n+ def new_function():\n+     return 'new feature'\n```",
+        "doc_string": "This PR introduces a new function that returns 'new feature'."
     }
-    return test_data'
+    return test_data
 '''

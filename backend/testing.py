@@ -11,7 +11,7 @@ def handle_pull_request_event(payload):
     installation_id = payload["installation"]["id"]
 
     if action in ["opened", "synchronize", "reopened"]:
-        with open("/Applications/Development/iNTUition_AIcoholics/backend/pulloutrequest.2025-03-22.private-key.pem", "r") as f:
+        with open("/Users/raghavgupta/Projects/AIcoholics/backend/pulloutrequest.2025-03-22.private-key.pem", "r") as f:
             private_key = f.read()
         g = authenticate_github(app_id=1188098, installation_id=installation_id, private_key=private_key)
         process_pull_request(g, repo, pr_number, sender)

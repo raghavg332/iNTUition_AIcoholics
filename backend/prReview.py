@@ -199,11 +199,11 @@ You are an AI code reviewer and documentation assistant.
 
 A developer submitted the following pull request. Please do the following:
 1. 🔍 Summarize the overall purpose of the PR. Be a little detailed
-2. 🧠 Rate the merge confidence on a scale of 1 - 10
-3. ✅ Review the code for:
-   - Syntax issues
+2. ✅ Review the code for:
+   - Syntax issues in Python (Make up some Issue)
    - Style (PEP8)
    - Functionality correctness (does it match the description?)
+3. Based on the review, provide a merge confidence score from 1 to 10.
 4. 📝 Extract or suggest updated docstrings for any changed or added functions/classes.
 5. The Code Diff is made up of the old and new version of the code, if any of the field is empty it means, the function is either added or deleted respectively.
 

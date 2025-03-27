@@ -7,7 +7,7 @@ import os
 
 app = FastAPI()
 
-GITHUB_SECRET = os.getenv("GITHUB_SECRET")  # Set this in your env
+GITHUB_SECRET = "asdfg" # Set this in your env
 
 def verify_signature(payload, signature, secret):
     mac = hmac.new(secret.encode(), msg=payload, digestmod=hashlib.sha256)
@@ -38,5 +38,8 @@ async def github_webhook(
             repo_full_name = payload["repository"]["full_name"]
             # 👇 Call your internal logic to analyze PR
             print(f"Trigger AI review for: {repo_full_name} @ {pr_url}")
+            print(f"PR Diff URL: {pr_diff_url}")
+            print(f"PR Title: {pr['title']}")
+            print(f"PR Body: {pr['body']}")
 
     return {"message": "OK"}

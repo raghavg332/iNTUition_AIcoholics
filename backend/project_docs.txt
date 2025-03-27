@@ -1,0 +1,138 @@
+# Project Documentation
+
+## Overview
+
+This project is a backend service responsible for handling pull request analysis using AI. It integrates with GitHub to receive pull request events, processes code diffs, and generates AI-powered summaries, merge confidence levels, and updated docstrings. The system also supports RAG (Retrieval-Augmented Generation) to suggest documentation changes based on a local reference file.
+
+All insights are stored in Snowflake for analytics and are viewable via a frontend web dashboard.
+
+---
+
+## API Interaction
+
+The system relies on multiple external APIs including GitHub, Groq, and internal APIs for metadata. Network calls should always be wrapped in proper error handling logic. When calling external APIs, it is important to include retry logic to handle transient failures like timeouts or 5xx server errors.
+
+Use exponential backoff strategies when retrying failed API requests. A typical retry pattern is to wait 2s, then 4s, then 8s between attempts. Retries should generally not exceed 3 attempts.
+
+Avoid retrying on client errors (e.g. 400 Bad Request, 404 Not Found), as these are not recoverable.
+
+---
+
+## Logging Standards
+
+Logs are essential for monitoring and debugging. Every network call, particularly those that involve retries or exceptions, should include a log entry. 
+
+Log messages should:
+- Include relevant request parameters
+- Include the retry attempt number if applicable
+- Be formatted consistently
+- Avoid leaking sensitive information (e.g., tokens, secrets)
+
+Prefer structured logs in JSON format for systems that support log parsing.
+
+---
+
+## Code Quality Guidelines
+
+All code should follow PEP8 formatting standards. Functions and classes must include clear, concise docstrings describing:
+- The purpose of the function
+- Input parameters
+- Expected return values
+- Exceptions raised (if any)
+
+Use type hints wherever possible for better readability and tooling support.
+
+---
+
+## Documentation Rules
+
+Every new function added to the codebase should include a docstring at the time of writing. If a function is updated significantly, its docstring should be reviewed and updated as well.
+
+Markdown is used as the standard format for documentation updates. Each section should use proper headers (`##`, `###`) and include code blocks where helpful.
+
+When suggesting doc updates via AI, ensure that content is:
+- Accurate to the change made
+- Written in a developer-friendly tone
+- Only includes relevant sections (avoid full rewrites unless needed)
+
+---
+
+## Example Retry Function
+
+Here is a recommended template for adding retry logic to API calls:
+
+```python
+import requests
+import time
+
+def fetch_with_retry(url, retries=3, backoff=2):
+    attempt = 0
+    while attempt < retries:
+        try:
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(backoff ** attempt)
+            attempt += 1
+    return None
+
+This function attempts an HTTP GET request with retries and logs each failed attempt. You can enhance it with structured logging and custom exceptions as needed.
+
+⸻
+
+Project Modules
+	•	testing.py: Entry point for GitHub webhook events using FastAPI
+	•	prReview.py: Main logic for PR parsing, AI review, and documentation generation
+	•	main.py: Backend for frontend dashboard
+	•	ai_analyse.py: Standalone script for invoking Groq and testing AI outputs
+
+⸻
+
+Database Schema (Snowflake)
+	•	PULL_REQUESTS: Stores metadata like PR ID, author, title, status, timestamps
+	•	PR_ANALYSIS: Stores AI-generated summaries, code quality ratings, docstrings, and diffs
+
+Ensure PR IDs are consistent across both tables.
+
+⸻
+
+Frontend Integration
+
+The web dashboard pulls data from the backend via REST API (served by FastAPI). It displays:
+	•	A list of pull requests with filters
+	•	Detailed diff view
+	•	AI summary and docstring suggestions
+	•	Markdown-rendered doc updates
+
+⸻
+
+Final Notes
+
+Before merging a PR:
+	•	Confirm that AI review output makes sense
+	•	Ensure documentation changes are accurate
+	•	Review log output for retry behavior and failures
+
+This system is designed to make code review and documentation smoother, but human oversight is still important for critical PRs.
+
+
+def login(user):
+    """Authenticates a user using their credentials.
+    Returns a session token if successful, otherwise raises an error."""
+
+def validate_user(user):
+    """Validates that the user object has all required fields.
+    Raises ValueError if any required field is missing."""
+
+def authenticate(user):
+    """Handles internal user authentication by checking hashed passwords
+    against the database. Returns True if authenticated."""
+
+def logout(session_id):
+    """Logs out a user by invalidating their session token."""
+
+def get_user_roles(user_id):
+    """Returns a list of roles assigned to a given user ID.
+    Roles determine access permissions in the application."""
